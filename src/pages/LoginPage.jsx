@@ -56,22 +56,21 @@ export default function LoginPage() {
   };
 
   return (
-    <div className={`min-h-screen w-full flex flex-col justify-between transition-colors duration-300 ${
-      isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'
-    }`}>
-      {/* 1. TOP HEADER: Display ONLY "MANGAL ELECTRICAL INDUSTRIES LIMITED" */}
-      <header className={`w-full border-b transition-colors duration-300 px-4 sm:px-8 py-3.5 flex items-center justify-between ${
-        isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white/95 border-slate-200 shadow-sm'
+    <div className={`min-h-screen w-full flex flex-col justify-between transition-colors duration-300 ${isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'
       }`}>
+      {/* 1. TOP HEADER: Display ONLY "MANGAL ELECTRICAL INDUSTRIES LIMITED" */}
+      <header className={`w-full border-b transition-colors duration-300 px-4 sm:px-8 py-3.5 flex items-center justify-between ${isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white/95 border-slate-200 shadow-sm'
+        }`}>
         <div className="flex items-center gap-3 sm:gap-4">
           <img
             src="/mangal-logo.png"
             alt="Mangal Logo"
             className="h-8 sm:h-9 w-auto object-contain"
           />
-          <h1 className="text-sm sm:text-lg lg:text-xl font-bold tracking-tight uppercase select-none text-slate-900 dark:text-white">
-            MANGAL ELECTRICAL INDUSTRIES LIMITED
+          <h1 className="text-sm sm:text-lg lg:text-xl font-bold font-mono tracking-tight uppercase select-none text-slate-900 dark:text-white">
+            Transformer Health Monitoring System
           </h1>
+
         </div>
 
         {/* Light Mode / Dark Mode Switcher */}
@@ -79,11 +78,10 @@ export default function LoginPage() {
           onClick={toggleTheme}
           type="button"
           aria-label="Toggle theme"
-          className={`p-2 rounded-xl border transition-all duration-200 active:scale-95 ${
-            isDark
-              ? 'bg-slate-800/80 border-slate-700 text-amber-400 hover:bg-slate-700'
-              : 'bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200'
-          }`}
+          className={`p-2 rounded-xl border transition-all duration-200 active:scale-95 ${isDark
+            ? 'bg-slate-800/80 border-slate-700 text-amber-400 hover:bg-slate-700'
+            : 'bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200'
+            }`}
           title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
         >
           {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
@@ -92,25 +90,23 @@ export default function LoginPage() {
 
       {/* 2. MAIN SECTION: 3D TRANSFORMER & STREAMLINED SIGN-IN */}
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 flex flex-col lg:flex-row items-center justify-between gap-6 lg:gap-10">
-        
+
         {/* LEFT / CENTER: PREMIUM 3D TRANSFORMER ANIMATION */}
         {/* Automatic continuous assembly and disassembly loop, no buttons, fully theme-adaptive */}
-        <div className={`relative w-full lg:w-3/5 xl:w-2/3 h-[380px] sm:h-[460px] lg:h-[540px] rounded-2xl overflow-hidden border transition-all duration-300 ${
-          isDark
-            ? 'bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900 border-slate-800/80 shadow-2xl'
-            : 'bg-gradient-to-b from-slate-100 via-slate-50 to-slate-100 border-slate-200 shadow-xl'
-        }`}>
+        <div className={`relative w-full lg:w-3/5 xl:w-2/3 h-[380px] sm:h-[460px] lg:h-[540px] rounded-2xl overflow-hidden border transition-all duration-300 ${isDark
+          ? 'bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900 border-slate-800/80 shadow-2xl'
+          : 'bg-gradient-to-b from-slate-100 via-slate-50 to-slate-100 border-slate-200 shadow-xl'
+          }`}>
           <TransformerAssembly3D isDark={isDark} />
         </div>
 
         {/* RIGHT: CLEAN & STREAMLINED SIGN-IN SECTION */}
         {/* Contains ONLY: 1. User Type selection (User/Admin), 2. User ID, 3. Password, 4. Login button */}
         <div className="w-full lg:w-2/5 xl:w-1/3 flex justify-center">
-          <div className={`w-full max-w-md p-6 sm:p-7 rounded-2xl border transition-all duration-300 ${
-            isDark
-              ? 'bg-slate-900/95 border-slate-800 shadow-2xl'
-              : 'bg-white border-slate-200 shadow-xl'
-          }`}>
+          <div className={`w-full max-w-md p-6 sm:p-7 rounded-2xl border transition-all duration-300 ${isDark
+            ? 'bg-slate-900/95 border-slate-800 shadow-2xl'
+            : 'bg-white border-slate-200 shadow-xl'
+            }`}>
             <div className="mb-5">
               <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
                 Sign In
@@ -131,17 +127,15 @@ export default function LoginPage() {
                 <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2 font-mono">
                   User Type
                 </label>
-                <div className={`grid grid-cols-2 gap-1.5 p-1 rounded-xl border ${
-                  isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-200'
-                }`}>
+                <div className={`grid grid-cols-2 gap-1.5 p-1 rounded-xl border ${isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-200'
+                  }`}>
                   <button
                     type="button"
                     onClick={() => handleUserTypeChange('User')}
-                    className={`py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
-                      userType === 'User'
-                        ? 'bg-cyan-600 text-white shadow-sm'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                    }`}
+                    className={`py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${userType === 'User'
+                      ? 'bg-cyan-600 text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      }`}
                   >
                     <User className="w-3.5 h-3.5" />
                     <span>User</span>
@@ -150,11 +144,10 @@ export default function LoginPage() {
                   <button
                     type="button"
                     onClick={() => handleUserTypeChange('Admin')}
-                    className={`py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
-                      userType === 'Admin'
-                        ? 'bg-blue-600 text-white shadow-sm'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                    }`}
+                    className={`py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${userType === 'Admin'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      }`}
                   >
                     <Shield className="w-3.5 h-3.5" />
                     <span>Admin</span>
@@ -175,11 +168,10 @@ export default function LoginPage() {
                     value={userId}
                     onChange={(e) => setUserId(e.target.value)}
                     placeholder="Enter your User ID"
-                    className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-xs font-mono outline-none transition-all ${
-                      isDark
-                        ? 'bg-slate-950 border-slate-800 text-white placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500'
-                        : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400 focus:bg-white focus:border-blue-600 focus:ring-1 focus:ring-blue-600'
-                    }`}
+                    className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-xs font-mono outline-none transition-all ${isDark
+                      ? 'bg-slate-950 border-slate-800 text-white placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500'
+                      : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400 focus:bg-white focus:border-blue-600 focus:ring-1 focus:ring-blue-600'
+                      }`}
                   />
                 </div>
               </div>
@@ -197,11 +189,10 @@ export default function LoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your Password"
-                    className={`w-full pl-9 pr-10 py-2.5 rounded-xl border text-xs font-mono outline-none transition-all ${
-                      isDark
-                        ? 'bg-slate-950 border-slate-800 text-white placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500'
-                        : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400 focus:bg-white focus:border-blue-600 focus:ring-1 focus:ring-blue-600'
-                    }`}
+                    className={`w-full pl-9 pr-10 py-2.5 rounded-xl border text-xs font-mono outline-none transition-all ${isDark
+                      ? 'bg-slate-950 border-slate-800 text-white placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500'
+                      : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400 focus:bg-white focus:border-blue-600 focus:ring-1 focus:ring-blue-600'
+                      }`}
                   />
                   <button
                     type="button"
@@ -228,11 +219,10 @@ export default function LoginPage() {
       </main>
 
       {/* 4. COMPANY INFORMATION AT THE BOTTOM OF THE LOGIN PAGE */}
-      <div className={`w-full border-t transition-colors duration-300 ${
-        isDark ? 'bg-slate-900/80 border-slate-800/80' : 'bg-white border-slate-200'
-      }`}>
+      <div className={`w-full border-t transition-colors duration-300 ${isDark ? 'bg-slate-900/80 border-slate-800/80' : 'bg-white border-slate-200'
+        }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          
+
           {/* Collapsible toggle bar for complete corporate details */}
           <div className="py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs">
             <button
@@ -255,14 +245,12 @@ export default function LoginPage() {
 
           {/* Expandable Company Information Drawer */}
           {showCompanyDetails && (
-            <div className={`pb-5 pt-3 border-t text-xs grid grid-cols-1 md:grid-cols-3 gap-5 animate-fade-in ${
-              isDark ? 'border-slate-800' : 'border-slate-100'
-            }`}>
-              
-              {/* SECTION A: GSTIN & CIN */}
-              <div className={`p-3.5 rounded-xl border ${
-                isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+            <div className={`pb-5 pt-3 border-t text-xs grid grid-cols-1 md:grid-cols-3 gap-5 animate-fade-in ${isDark ? 'border-slate-800' : 'border-slate-100'
               }`}>
+
+              {/* SECTION A: GSTIN & CIN */}
+              <div className={`p-3.5 rounded-xl border ${isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+                }`}>
                 <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400 font-mono text-[11px] mb-2">
                   <FileCheck2 className="w-3.5 h-3.5" />
                   <span>GSTIN & CIN Registrations</span>
@@ -288,9 +276,8 @@ export default function LoginPage() {
               </div>
 
               {/* SECTION B: REGISTERED OFFICE ADDRESS */}
-              <div className={`p-3.5 rounded-xl border ${
-                isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
-              }`}>
+              <div className={`p-3.5 rounded-xl border ${isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+                }`}>
                 <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 font-mono text-[11px] mb-2">
                   <MapPin className="w-3.5 h-3.5" />
                   <span>Registered Office Address</span>
@@ -303,9 +290,8 @@ export default function LoginPage() {
               </div>
 
               {/* SECTION C: FACTORY MANUFACTURING UNITS */}
-              <div className={`p-3.5 rounded-xl border ${
-                isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
-              }`}>
+              <div className={`p-3.5 rounded-xl border ${isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+                }`}>
                 <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-mono text-[11px] mb-2">
                   <Factory className="w-3.5 h-3.5" />
                   <span>Factory Addresses (Units 1 - 5)</span>
@@ -333,14 +319,13 @@ export default function LoginPage() {
           )}
 
           {/* OFFICIAL FOOTER BRANDING LINE */}
-          <div className={`py-3 border-t flex flex-col sm:flex-row items-center justify-between gap-2 text-xs font-mono text-slate-500 dark:text-slate-400 ${
-            isDark ? 'border-slate-800' : 'border-slate-200'
-          }`}>
+          <div className={`py-3 border-t flex flex-col sm:flex-row items-center justify-between gap-2 text-xs font-mono text-slate-500 dark:text-slate-400 ${isDark ? 'border-slate-800' : 'border-slate-200'
+            }`}>
             <span className="font-semibold text-slate-700 dark:text-slate-300">
               Powered by Mangal Electrical Industries Limited
             </span>
             <span>
-              Jaipur, Rajasthan, India.
+              India.
             </span>
           </div>
 
