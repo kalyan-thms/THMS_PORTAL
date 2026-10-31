@@ -62,15 +62,43 @@ export const AuthProvider = ({ children }) => {
     }
   }, [currentUser]);
 
-  // Login handler
-  const login = (email, password) => {
-    // Case-insensitive email match
-    const matched = users.find(u => u.email.toLowerCase() === email.trim().toLowerCase());
+  // Login handler with support for User ID or Email and Role
+  const login = (userIdOrEmail, password, userType = 'User') => {
+    const term = (userIdOrEmail || '').trim().toLowerCase();
+    
+    // 1. Direct match by email or ID
+    let matched = users.find(u => 
+      u.email.toLowerCase() === term || 
+      u.id.toLowerCase() === term
+    );
+
+    // 2. Friendly alias match
+    if (!matched) {
+      if (term === 'admin') {
+        matched = users.find(u => u.role === 'Administrator');
+      } else if (term === 'user' || term === 'client' || term === 'adani') {
+        matched = users.find(u => u.email === 'client@adani.com');
+      } else if (term === 'tata') {
+        matched = users.find(u => u.email === 'engineer@tatapower.com');
+      } else if (term === 'ntpc') {
+        matched = users.find(u => u.email === 'alok@ntpc.co.in');
+      }
+    }
+
+    // 3. Fallback matching userType if provided
+    if (!matched && userType) {
+      if (userType === 'Admin') {
+        matched = users.find(u => u.role === 'Administrator');
+      } else {
+        matched = users.find(u => u.role === 'End User');
+      }
+    }
+
     if (matched) {
       setCurrentUser(matched);
       return { success: true, user: matched };
     }
-    return { success: false, error: 'Invalid email credentials. Please choose a valid role account.' };
+    return { success: false, error: 'Invalid User ID or Password. Please verify your credentials.' };
   };
 
   // Quick switch for demo evaluation

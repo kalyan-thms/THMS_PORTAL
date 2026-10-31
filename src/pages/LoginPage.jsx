@@ -3,247 +3,347 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import TransformerAssembly3D from '../components/3d/TransformerAssembly3D';
 import {
-  Shield,
   Lock,
-  Mail,
-  ArrowRight,
+  User,
+  Shield,
   Sun,
   Moon,
-  Building2,
-  CheckCircle2,
-  AlertCircle,
   Eye,
-  EyeOff
+  EyeOff,
+  ArrowRight,
+  ChevronDown,
+  ChevronUp,
+  Building,
+  Factory,
+  FileCheck2,
+  MapPin,
+  AlertCircle
 } from 'lucide-react';
 
 export default function LoginPage() {
-  const { login, loginAsDemo } = useAuth();
-  const { theme, toggleTheme, isDark } = useTheme();
+  const { login } = useAuth();
+  const { toggleTheme, isDark } = useTheme();
 
-  const [email, setEmail] = useState('client@adani.com');
-  const [password, setPassword] = useState('password123');
+  // User Type selection: ONLY 'User' or 'Admin'
+  const [userType, setUserType] = useState('User'); // 'User' | 'Admin'
+  const [userId, setUserId] = useState('client@adani.com');
+  const [password, setPassword] = useState('client2026');
   const [showPassword, setShowPassword] = useState(false);
-  const [selectedRoleTab, setSelectedRoleTab] = useState('enduser'); // 'enduser' | 'admin'
   const [errorMsg, setErrorMsg] = useState('');
-  const [isAssembled, setIsAssembled] = useState(false);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    setErrorMsg('');
-    const res = login(email, password);
-    if (!res.success) {
-      setErrorMsg(res.error || 'Authentication failed.');
-    }
-  };
+  // Expandable company information footer
+  const [showCompanyDetails, setShowCompanyDetails] = useState(false);
 
-  const handleSelectRoleTab = (role) => {
-    setSelectedRoleTab(role);
+  const handleUserTypeChange = (type) => {
+    setUserType(type);
     setErrorMsg('');
-    if (role === 'admin') {
-      setEmail('admin@mangal.com');
+    if (type === 'Admin') {
+      setUserId('admin@mangal.com');
       setPassword('admin2026');
     } else {
-      setEmail('client@adani.com');
+      setUserId('client@adani.com');
       setPassword('client2026');
     }
   };
 
-  const handleQuickDemoLogin = (roleKey) => {
-    loginAsDemo(roleKey);
+  const handleLogin = (e) => {
+    e.preventDefault();
+    setErrorMsg('');
+    const res = login(userId, password, userType);
+    if (!res.success) {
+      setErrorMsg(res.error || 'Invalid credentials. Please verify your User ID and password.');
+    }
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col lg:flex-row bg-slate-950 text-slate-100 selection:bg-cyan-500 selection:text-white">
-      {/* LEFT: CINEMATIC 3D TRANSFORMER ASSEMBLY SECTION (Section 3 of User Prompt) */}
-      <div className="relative w-full lg:w-3/5 xl:w-2/3 h-[460px] sm:h-[520px] lg:h-screen flex flex-col justify-between overflow-hidden border-b lg:border-b-0 lg:border-r border-slate-800 bg-slate-950">
-        {/* Top Floating Branding */}
-        <div className="absolute top-4 left-4 z-20 flex items-center gap-3 bg-slate-900/80 backdrop-blur-md px-3 py-2 rounded-xl border border-slate-800/80 shadow-lg">
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-700 to-cyan-600 flex items-center justify-center font-bold text-white text-xs tracking-wider shadow">
-            MEIL
-          </div>
-          <div>
-            <span className="font-bold text-sm text-white tracking-tight block">
-              Mangal Electrical Industries Limited
-            </span>
-            <span className="text-[10px] font-mono text-cyan-400 block">
-              Research & Development Department • Jaipur
-            </span>
-          </div>
+    <div className={`min-h-screen w-full flex flex-col justify-between transition-colors duration-300 ${
+      isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'
+    }`}>
+      {/* 1. TOP HEADER: Display ONLY "MANGAL ELECTRICAL INDUSTRIES LIMITED" */}
+      <header className={`w-full border-b transition-colors duration-300 px-4 sm:px-8 py-3.5 flex items-center justify-between ${
+        isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white/95 border-slate-200 shadow-sm'
+      }`}>
+        <div className="flex items-center gap-3 sm:gap-4">
+          <img
+            src="/mangal-logo.png"
+            alt="Mangal Logo"
+            className="h-8 sm:h-9 w-auto object-contain"
+          />
+          <h1 className="text-sm sm:text-lg lg:text-xl font-bold tracking-tight uppercase select-none text-slate-900 dark:text-white">
+            MANGAL ELECTRICAL INDUSTRIES LIMITED
+          </h1>
         </div>
 
-        {/* 3D Assembly Simulator */}
-        <div className="w-full h-full">
-          <TransformerAssembly3D onAssembledChange={setIsAssembled} />
+        {/* Light Mode / Dark Mode Switcher */}
+        <button
+          onClick={toggleTheme}
+          type="button"
+          aria-label="Toggle theme"
+          className={`p-2 rounded-xl border transition-all duration-200 active:scale-95 ${
+            isDark
+              ? 'bg-slate-800/80 border-slate-700 text-amber-400 hover:bg-slate-700'
+              : 'bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200'
+          }`}
+          title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+        >
+          {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+        </button>
+      </header>
+
+      {/* 2. MAIN SECTION: 3D TRANSFORMER & STREAMLINED SIGN-IN */}
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 flex flex-col lg:flex-row items-center justify-between gap-6 lg:gap-10">
+        
+        {/* LEFT / CENTER: PREMIUM 3D TRANSFORMER ANIMATION */}
+        {/* Automatic continuous assembly and disassembly loop, no buttons, fully theme-adaptive */}
+        <div className={`relative w-full lg:w-3/5 xl:w-2/3 h-[380px] sm:h-[460px] lg:h-[540px] rounded-2xl overflow-hidden border transition-all duration-300 ${
+          isDark
+            ? 'bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900 border-slate-800/80 shadow-2xl'
+            : 'bg-gradient-to-b from-slate-100 via-slate-50 to-slate-100 border-slate-200 shadow-xl'
+        }`}>
+          <TransformerAssembly3D isDark={isDark} />
         </div>
-      </div>
 
-      {/* RIGHT: SECURE LOGIN FORM (Section 4 of DPR) */}
-      <div className="w-full lg:w-2/5 xl:w-1/3 flex flex-col justify-between p-6 sm:p-8 lg:p-10 bg-slate-900/90 backdrop-blur-lg border-l border-slate-800">
-        {/* Top Header / Theme Toggle */}
-        <div className="flex items-center justify-between pb-4">
-          <span className="text-[10px] uppercase font-mono tracking-wider font-semibold text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-800/60">
-            THMS Commercial Portal v2.4
-          </span>
+        {/* RIGHT: CLEAN & STREAMLINED SIGN-IN SECTION */}
+        {/* Contains ONLY: 1. User Type selection (User/Admin), 2. User ID, 3. Password, 4. Login button */}
+        <div className="w-full lg:w-2/5 xl:w-1/3 flex justify-center">
+          <div className={`w-full max-w-md p-6 sm:p-7 rounded-2xl border transition-all duration-300 ${
+            isDark
+              ? 'bg-slate-900/95 border-slate-800 shadow-2xl'
+              : 'bg-white border-slate-200 shadow-xl'
+          }`}>
+            <div className="mb-5">
+              <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
+                Sign In
+              </h2>
+            </div>
 
-          <button
-            onClick={toggleTheme}
-            className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800 transition"
-            title="Toggle theme"
-          >
-            {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4" />}
-          </button>
-        </div>
+            {/* Error Message */}
+            {errorMsg && (
+              <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{errorMsg}</span>
+              </div>
+            )}
 
-        {/* Center: Auth Card */}
-        <div className="my-auto py-6">
-          <div className="mb-6">
-            <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-              Sign In to THMS Portal
-            </h2>
-            <p className="text-xs text-slate-400 mt-1">
-              Industrial Transformer Health & Electrical Telemetry Monitoring
-            </p>
+            <form onSubmit={handleLogin} className="space-y-4">
+              {/* 1. USER TYPE SELECTION: ONLY "User" and "Admin" */}
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2 font-mono">
+                  User Type
+                </label>
+                <div className={`grid grid-cols-2 gap-1.5 p-1 rounded-xl border ${
+                  isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-200'
+                }`}>
+                  <button
+                    type="button"
+                    onClick={() => handleUserTypeChange('User')}
+                    className={`py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                      userType === 'User'
+                        ? 'bg-cyan-600 text-white shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <User className="w-3.5 h-3.5" />
+                    <span>User</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleUserTypeChange('Admin')}
+                    className={`py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                      userType === 'Admin'
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <Shield className="w-3.5 h-3.5" />
+                    <span>Admin</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* 2. USER ID */}
+              <div>
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                  User ID
+                </label>
+                <div className="relative">
+                  <User className="w-4 h-4 absolute left-3 top-3 text-slate-400 dark:text-slate-500" />
+                  <input
+                    type="text"
+                    required
+                    value={userId}
+                    onChange={(e) => setUserId(e.target.value)}
+                    placeholder="Enter your User ID"
+                    className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-xs font-mono outline-none transition-all ${
+                      isDark
+                        ? 'bg-slate-950 border-slate-800 text-white placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500'
+                        : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400 focus:bg-white focus:border-blue-600 focus:ring-1 focus:ring-blue-600'
+                    }`}
+                  />
+                </div>
+              </div>
+
+              {/* 3. PASSWORD */}
+              <div>
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                  Password
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 absolute left-3 top-3 text-slate-400 dark:text-slate-500" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter your Password"
+                    className={`w-full pl-9 pr-10 py-2.5 rounded-xl border text-xs font-mono outline-none transition-all ${
+                      isDark
+                        ? 'bg-slate-950 border-slate-800 text-white placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500'
+                        : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400 focus:bg-white focus:border-blue-600 focus:ring-1 focus:ring-blue-600'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    aria-label="Toggle password visibility"
+                    className="absolute right-3 top-2.5 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* 4. LOGIN BUTTON */}
+              <button
+                type="submit"
+                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-blue-700 via-blue-600 to-cyan-600 hover:from-blue-600 hover:to-cyan-500 text-white font-semibold text-xs tracking-wide shadow-md transition-all active:scale-98 flex items-center justify-center gap-2 mt-2"
+              >
+                <span>Login</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </form>
           </div>
+        </div>
+      </main>
 
-          {/* User Category Tabs (Strictly DPR Section 2: End User vs Administrator) */}
-          <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-slate-950 border border-slate-800 mb-5">
+      {/* 4. COMPANY INFORMATION AT THE BOTTOM OF THE LOGIN PAGE */}
+      <div className={`w-full border-t transition-colors duration-300 ${
+        isDark ? 'bg-slate-900/80 border-slate-800/80' : 'bg-white border-slate-200'
+      }`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          {/* Collapsible toggle bar for complete corporate details */}
+          <div className="py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs">
             <button
               type="button"
-              onClick={() => handleSelectRoleTab('enduser')}
-              className={`py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition ${
-                selectedRoleTab === 'enduser'
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : 'text-slate-400 hover:text-white'
-              }`}
+              onClick={() => setShowCompanyDetails(!showCompanyDetails)}
+              className="flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-cyan-400 font-medium transition"
             >
-              <Building2 className="w-3.5 h-3.5" />
-              <span>End User</span>
+              <Building className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+              <span>Corporate Information (GSTIN • CIN • Registered Office • Manufacturing Units)</span>
+              {showCompanyDetails ? <ChevronUp className="w-4 h-4 ml-1" /> : <ChevronDown className="w-4 h-4 ml-1" />}
             </button>
 
-            <button
-              type="button"
-              onClick={() => handleSelectRoleTab('admin')}
-              className={`py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition ${
-                selectedRoleTab === 'admin'
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Shield className="w-3.5 h-3.5" />
-              <span>Administrator</span>
-            </button>
+            {/* Statutory Quick Badges */}
+            <div className="flex flex-wrap items-center gap-2 font-mono text-[11px] text-slate-500 dark:text-slate-400">
+              <span>CIN: <strong className="text-slate-700 dark:text-slate-300">L31909RJ2008PLC026255</strong></span>
+              <span className="hidden sm:inline">•</span>
+              <span>GSTIN: <strong className="text-slate-700 dark:text-slate-300">08AAFCM4722P1Z1</strong></span>
+            </div>
           </div>
 
-          {/* Error Message */}
-          {errorMsg && (
-            <div className="mb-4 p-3 rounded-lg bg-rose-950/60 border border-rose-800 text-rose-300 text-xs flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
-              <span>{errorMsg}</span>
+          {/* Expandable Company Information Drawer */}
+          {showCompanyDetails && (
+            <div className={`pb-5 pt-3 border-t text-xs grid grid-cols-1 md:grid-cols-3 gap-5 animate-fade-in ${
+              isDark ? 'border-slate-800' : 'border-slate-100'
+            }`}>
+              
+              {/* SECTION A: GSTIN & CIN */}
+              <div className={`p-3.5 rounded-xl border ${
+                isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+              }`}>
+                <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400 font-mono text-[11px] mb-2">
+                  <FileCheck2 className="w-3.5 h-3.5" />
+                  <span>GSTIN & CIN Registrations</span>
+                </div>
+                <div className="space-y-1.5 font-mono text-[11px]">
+                  <div>
+                    <span className="text-slate-400 block font-sans text-[10px]">CIN:</span>
+                    <strong className="text-slate-800 dark:text-slate-200">L31909RJ2008PLC026255</strong>
+                  </div>
+                  <div className="pt-1">
+                    <span className="text-slate-400 block font-sans text-[10px]">GSTIN Rajasthan:</span>
+                    <strong className="text-slate-800 dark:text-slate-200">08AAFCM4722P1Z1</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block font-sans text-[10px]">GSTIN Rajasthan (SEZ):</span>
+                    <strong className="text-slate-800 dark:text-slate-200">08AAFCM4722P2Z0</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block font-sans text-[10px]">GSTIN Uttar Pradesh:</span>
+                    <strong className="text-slate-800 dark:text-slate-200">09AAFCM4722P1ZZ</strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION B: REGISTERED OFFICE ADDRESS */}
+              <div className={`p-3.5 rounded-xl border ${
+                isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+              }`}>
+                <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 font-mono text-[11px] mb-2">
+                  <MapPin className="w-3.5 h-3.5" />
+                  <span>Registered Office Address</span>
+                </div>
+                <p className="text-slate-700 dark:text-slate-300 leading-relaxed font-sans">
+                  C-61, C-61 (A&B), Road No. 1-C,<br />
+                  V.K.I. Area, Jaipur 302 013,<br />
+                  Rajasthan, India
+                </p>
+              </div>
+
+              {/* SECTION C: FACTORY MANUFACTURING UNITS */}
+              <div className={`p-3.5 rounded-xl border ${
+                isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+              }`}>
+                <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-mono text-[11px] mb-2">
+                  <Factory className="w-3.5 h-3.5" />
+                  <span>Factory Addresses (Units 1 - 5)</span>
+                </div>
+                <div className="space-y-2 text-[11px] text-slate-700 dark:text-slate-300 font-sans max-h-48 overflow-y-auto pr-1">
+                  <div>
+                    <strong>Unit 1:</strong> C-61, C-61 (A&B), Road No. 1-C, V.K.I. Area, Jaipur 302 013, Rajasthan, India
+                  </div>
+                  <div>
+                    <strong>Unit 2:</strong> E-54, Road No.5, VKI Area, Jaipur 302 013, Rajasthan, India
+                  </div>
+                  <div>
+                    <strong>Unit 3:</strong> Plot no. B-308, Road No.16, Vishwakarma Industrial Area, Jaipur 302 013, Rajasthan, India
+                  </div>
+                  <div>
+                    <strong>Unit 4:</strong> E-40 to E-46A, Shree Khatu, Shyam ji Industrial Area, Reengus, Sikar 332 404, Rajasthan, India
+                  </div>
+                  <div>
+                    <strong>Unit 5:</strong> Plot No. PA 011 -008B, Mahindra World City SEZ Zone, Kalwara Ajmer Road 302 029, Rajasthan, India
+                  </div>
+                </div>
+              </div>
+
             </div>
           )}
 
-          {/* Login Form */}
-          <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-            <div>
-              <label className="block text-slate-300 font-medium mb-1.5">
-                Authorized Email Address
-              </label>
-              <div className="relative">
-                <Mail className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@company.com"
-                  className="w-full pl-9 pr-3 py-2.5 rounded-lg bg-slate-950 border border-slate-800 text-white placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none font-mono transition"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-slate-300 font-medium mb-1.5">
-                Security Password
-              </label>
-              <div className="relative">
-                <Lock className="w-4 h-4 absolute left-3 top-3 text-slate-500" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••••••"
-                  className="w-full pl-9 pr-10 py-2.5 rounded-lg bg-slate-950 border border-slate-800 text-white placeholder-slate-500 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none font-mono transition"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-3 text-slate-500 hover:text-slate-300"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              className="w-full py-2.5 rounded-lg bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-semibold flex items-center justify-center gap-2 shadow-lg shadow-cyan-900/30 transition active:scale-95 mt-2"
-            >
-              <span>Authenticate & Enter Portal</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </form>
-
-          {/* Quick Demo Credentials Switcher for Evaluation */}
-          <div className="mt-6 pt-5 border-t border-slate-800">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 block mb-2 font-semibold">
-              Instant Demo Access (Click to Test Role):
+          {/* OFFICIAL FOOTER BRANDING LINE */}
+          <div className={`py-3 border-t flex flex-col sm:flex-row items-center justify-between gap-2 text-xs font-mono text-slate-500 dark:text-slate-400 ${
+            isDark ? 'border-slate-800' : 'border-slate-200'
+          }`}>
+            <span className="font-semibold text-slate-700 dark:text-slate-300">
+              Powered by Mangal Electrical Industries Limited
             </span>
-            <div className="grid grid-cols-2 gap-2 text-[11px]">
-              <button
-                type="button"
-                onClick={() => handleQuickDemoLogin('admin')}
-                className="p-2 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 text-left text-slate-300 transition flex flex-col"
-              >
-                <strong className="text-blue-400">Admin (Mangal R&D)</strong>
-                <span className="text-[10px] text-slate-500 font-mono">admin@mangal.com</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickDemoLogin('adani')}
-                className="p-2 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 text-left text-slate-300 transition flex flex-col"
-              >
-                <strong className="text-emerald-400">End User (Adani Power)</strong>
-                <span className="text-[10px] text-slate-500 font-mono">client@adani.com</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickDemoLogin('tata')}
-                className="p-2 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 text-left text-slate-300 transition flex flex-col"
-              >
-                <strong className="text-cyan-400">End User (Tata Power)</strong>
-                <span className="text-[10px] text-slate-500 font-mono">engineer@tatapower.com</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickDemoLogin('ntpc')}
-                className="p-2 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 text-left text-slate-300 transition flex flex-col"
-              >
-                <strong className="text-purple-400">End User (NTPC Outdated)</strong>
-                <span className="text-[10px] text-slate-500 font-mono">alok@ntpc.co.in</span>
-              </button>
-            </div>
+            <span>
+              Jaipur, Rajasthan, India.
+            </span>
           </div>
-        </div>
 
-        {/* Footer Notice */}
-        <div className="pt-4 border-t border-slate-800/80 text-[10px] text-slate-500 font-mono leading-relaxed">
-          <p>
-            Commercial Software Portal developed for <strong>Mangal Electrical Industries Limited</strong>. Conforming strictly to internal THMS Detailed Project Report (DPR).
-          </p>
         </div>
       </div>
     </div>

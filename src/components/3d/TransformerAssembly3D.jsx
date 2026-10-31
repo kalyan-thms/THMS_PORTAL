@@ -1,8 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import { Play, Pause, RotateCcw, Eye, Compass, Layers } from 'lucide-react';
 
-export default function TransformerAssembly3D({ onAssembledChange }) {
+export default function TransformerAssembly3D({ isDark = true }) {
   const mountRef = useRef(null);
   const sceneRef = useRef(null);
   const rendererRef = useRef(null);
@@ -12,20 +11,119 @@ export default function TransformerAssembly3D({ onAssembledChange }) {
   const isDraggingRef = useRef(false);
   const previousMousePosition = useRef({ x: 0, y: 0 });
 
-  // Animation states
-  const [assemblyProgress, setAssemblyProgress] = useState(0); // 0 = fully separated, 1 = fully assembled
-  const [isPlaying, setIsPlaying] = useState(true);
-  const [cinematicMode, setCinematicMode] = useState(true);
-  const [activePreset, setActivePreset] = useState('iso');
-
-  // Animation timing reference
-  const animState = useRef({
-    progress: 0, // starts separated
-    direction: 1, // 1 = assembling, 0 = paused
-    speed: 0.35, // progress units per second
-    cameraAngle: 0.6,
-    assembledNotified: false
+  // References to dynamic lights & materials for theme updates
+  const themeElementsRef = useRef({
+    gridHelper: null,
+    shadowPlane: null,
+    ambientLight: null,
+    keyLight: null,
+    fillLight: null,
+    rimLight: null,
+    materials: {}
   });
+
+  // Animation cycle state
+  // 0: Assembled pause, 1: Disassembling, 2: Exploded pause, 3: Assembling
+  const animTimeline = useRef({
+    state: 0, // start assembled
+    stateTimer: 0,
+    progress: 1.0, // 1.0 = assembled, 0.0 = exploded
+    cameraTheta: 0.65,
+    cameraPhi: 0.48,
+    cameraDist: 14.2,
+    isUserInteracting: false,
+    userInteractTimeout: null
+  });
+
+  // Re-theme scene when isDark changes
+  useEffect(() => {
+    if (!sceneRef.current) return;
+    const scene = sceneRef.current;
+    const { gridHelper, shadowPlane, ambientLight, keyLight, fillLight, rimLight, materials } = themeElementsRef.current;
+
+    if (isDark) {
+      scene.background = new THREE.Color(0x0b1322);
+      scene.fog = new THREE.FogExp2(0x0b1322, 0.022);
+
+      if (ambientLight) ambientLight.color.setHex(0xc8d8ec);
+      if (ambientLight) ambientLight.intensity = 1.3;
+
+      if (keyLight) keyLight.color.setHex(0xffffff);
+      if (keyLight) keyLight.intensity = 2.8;
+
+      if (fillLight) fillLight.color.setHex(0x0284c7);
+      if (fillLight) fillLight.intensity = 1.8;
+
+      if (rimLight) rimLight.color.setHex(0x38bdf8);
+      if (rimLight) rimLight.intensity = 2.2;
+
+      if (gridHelper) {
+        scene.remove(gridHelper);
+        const newGrid = new THREE.GridHelper(32, 40, 0x1e3a8a, 0x172554);
+        newGrid.position.y = -2.2;
+        scene.add(newGrid);
+        themeElementsRef.current.gridHelper = newGrid;
+      }
+
+      if (shadowPlane) {
+        shadowPlane.material.opacity = 0.45;
+      }
+
+      // Materials update for Dark Theme
+      if (materials.tank) {
+        materials.tank.color.setHex(0x3b4a5d);
+        materials.tank.metalness = 0.7;
+        materials.tank.roughness = 0.3;
+      }
+      if (materials.tankCover) {
+        materials.tankCover.color.setHex(0x232f3e);
+      }
+      if (materials.radiator) {
+        materials.radiator.color.setHex(0x526071);
+      }
+    } else {
+      // Light Theme
+      scene.background = new THREE.Color(0xf1f5f9);
+      scene.fog = new THREE.FogExp2(0xf1f5f9, 0.02);
+
+      if (ambientLight) ambientLight.color.setHex(0xffffff);
+      if (ambientLight) ambientLight.intensity = 1.5;
+
+      if (keyLight) keyLight.color.setHex(0xfffaed);
+      if (keyLight) keyLight.intensity = 2.2;
+
+      if (fillLight) fillLight.color.setHex(0x64748b);
+      if (fillLight) fillLight.intensity = 1.4;
+
+      if (rimLight) rimLight.color.setHex(0x0284c7);
+      if (rimLight) rimLight.intensity = 1.6;
+
+      if (gridHelper) {
+        scene.remove(gridHelper);
+        const newGrid = new THREE.GridHelper(32, 40, 0x94a3b8, 0xcbd5e1);
+        newGrid.position.y = -2.2;
+        scene.add(newGrid);
+        themeElementsRef.current.gridHelper = newGrid;
+      }
+
+      if (shadowPlane) {
+        shadowPlane.material.opacity = 0.18;
+      }
+
+      // Materials update for Light Theme
+      if (materials.tank) {
+        materials.tank.color.setHex(0x2a3749);
+        materials.tank.metalness = 0.6;
+        materials.tank.roughness = 0.35;
+      }
+      if (materials.tankCover) {
+        materials.tankCover.color.setHex(0x1a2332);
+      }
+      if (materials.radiator) {
+        materials.radiator.color.setHex(0x424f60);
+      }
+    }
+  }, [isDark]);
 
   useEffect(() => {
     const container = mountRef.current;
@@ -38,33 +136,32 @@ export default function TransformerAssembly3D({ onAssembledChange }) {
     const scene = new THREE.Scene();
     sceneRef.current = scene;
 
-    // Background: Dark gradient ambient studio
-    scene.background = new THREE.Color(0x0a101d);
-    scene.fog = new THREE.FogExp2(0x0a101d, 0.025);
+    const initialBg = isDark ? 0x0b1322 : 0xf1f5f9;
+    scene.background = new THREE.Color(initialBg);
+    scene.fog = new THREE.FogExp2(initialBg, 0.022);
 
     // 2. Camera setup
-    const camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 100);
-    camera.position.set(11, 7, 13);
-    camera.lookAt(0, 1.2, 0);
+    const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 100);
+    camera.position.set(11, 6.8, 13.5);
+    camera.lookAt(0, 0.9, 0);
     cameraRef.current = camera;
 
     // 3. Renderer setup
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.25;
+    renderer.toneMappingExposure = isDark ? 1.25 : 1.15;
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
-    // 4. Lighting - Premium industrial lighting setup
-    const ambientLight = new THREE.AmbientLight(0xdce7f5, 1.2);
+    // 4. Lighting
+    const ambientLight = new THREE.AmbientLight(isDark ? 0xc8d8ec : 0xffffff, isDark ? 1.3 : 1.5);
     scene.add(ambientLight);
 
-    // Main key light (cool white industrial spotlight)
-    const keyLight = new THREE.DirectionalLight(0xffffff, 2.8);
+    const keyLight = new THREE.DirectionalLight(isDark ? 0xffffff : 0xfffaed, isDark ? 2.8 : 2.2);
     keyLight.position.set(12, 18, 10);
     keyLight.castShadow = true;
     keyLight.shadow.mapSize.width = 1024;
@@ -79,98 +176,88 @@ export default function TransformerAssembly3D({ onAssembledChange }) {
     keyLight.shadow.camera.bottom = -d;
     scene.add(keyLight);
 
-    // Warm fill light (amber glow representing electrical energy)
-    const fillLight = new THREE.DirectionalLight(0x0284c7, 1.6);
+    const fillLight = new THREE.DirectionalLight(isDark ? 0x0284c7 : 0x64748b, isDark ? 1.8 : 1.4);
     fillLight.position.set(-10, 8, -8);
     scene.add(fillLight);
 
-    // Blue rim light for high-tech contours
-    const rimLight = new THREE.DirectionalLight(0x38bdf8, 2.2);
-    rimLight.position.set(0, -6, -12);
+    const rimLight = new THREE.DirectionalLight(isDark ? 0x38bdf8 : 0x0284c7, isDark ? 2.2 : 1.6);
+    rimLight.position.set(0, -5, -12);
     scene.add(rimLight);
 
-    // Subtle overhead point light
-    const pointLight = new THREE.PointLight(0x60a5fa, 1.5, 20);
+    const pointLight = new THREE.PointLight(0x60a5fa, 1.2, 20);
     pointLight.position.set(0, 5, 0);
     scene.add(pointLight);
 
     // 5. Floor Grid and Shadow Plane
-    const gridHelper = new THREE.GridHelper(30, 40, 0x1e3a8a, 0x172554);
+    const gridColor1 = isDark ? 0x1e3a8a : 0x94a3b8;
+    const gridColor2 = isDark ? 0x172554 : 0xcbd5e1;
+    const gridHelper = new THREE.GridHelper(32, 40, gridColor1, gridColor2);
     gridHelper.position.y = -2.2;
     scene.add(gridHelper);
 
     const shadowPlaneGeo = new THREE.PlaneGeometry(24, 24);
-    const shadowPlaneMat = new THREE.ShadowMaterial({ opacity: 0.45 });
+    const shadowPlaneMat = new THREE.ShadowMaterial({ opacity: isDark ? 0.45 : 0.18 });
     const shadowPlane = new THREE.Mesh(shadowPlaneGeo, shadowPlaneMat);
     shadowPlane.rotation.x = -Math.PI / 2;
     shadowPlane.position.y = -2.19;
     shadowPlane.receiveShadow = true;
     scene.add(shadowPlane);
 
-    // 6. Realistic Industrial Materials
-    // Substation Tank: Industrial battleship slate steel with subtle specular sheen
+    // 6. Materials
     const tankMaterial = new THREE.MeshStandardMaterial({
-      color: 0x334155,
-      metalness: 0.65,
-      roughness: 0.35,
+      color: isDark ? 0x3b4a5d : 0x2a3749,
+      metalness: isDark ? 0.7 : 0.6,
+      roughness: isDark ? 0.3 : 0.35,
     });
 
     const tankCoverMaterial = new THREE.MeshStandardMaterial({
-      color: 0x1e293b,
-      metalness: 0.7,
-      roughness: 0.3,
+      color: isDark ? 0x232f3e : 0x1a2332,
+      metalness: 0.75,
+      roughness: 0.28,
     });
 
-    // Copper Windings
     const copperMaterial = new THREE.MeshStandardMaterial({
-      color: 0xb45309,
-      metalness: 0.85,
-      roughness: 0.25,
+      color: 0xd97706,
+      metalness: 0.88,
+      roughness: 0.22,
     });
 
-    // Magnetic Silicon Steel Core
     const coreMaterial = new THREE.MeshStandardMaterial({
       color: 0x1f2937,
-      metalness: 0.8,
-      roughness: 0.4,
+      metalness: 0.82,
+      roughness: 0.38,
     });
 
-    // Porcelain Bushings (High-voltage ceramic brown glaze)
     const hvPorcelainMaterial = new THREE.MeshStandardMaterial({
-      color: 0x7c2d12, // Glazed brown ceramic
-      metalness: 0.1,
-      roughness: 0.15,
+      color: 0x881337,
+      metalness: 0.15,
+      roughness: 0.12,
     });
 
-    // LV Bushings (Off-white / cream ceramic glaze)
     const lvPorcelainMaterial = new THREE.MeshStandardMaterial({
       color: 0xe2e8f0,
-      metalness: 0.1,
+      metalness: 0.15,
       roughness: 0.18,
     });
 
-    // Brass / Bronze Terminals
     const brassMaterial = new THREE.MeshStandardMaterial({
-      color: 0xd97706,
+      color: 0xf59e0b,
       metalness: 0.9,
       roughness: 0.2,
     });
 
-    // Radiator Fins (Zinc / Galvanized steel)
     const radiatorMaterial = new THREE.MeshStandardMaterial({
-      color: 0x475569,
+      color: isDark ? 0x526071 : 0x424f60,
       metalness: 0.75,
       roughness: 0.38,
     });
 
-    // Conservator Tank
     const conservatorMaterial = new THREE.MeshStandardMaterial({
-      color: 0x2563eb,
-      metalness: 0.6,
-      roughness: 0.32,
+      color: 0x0284c7,
+      metalness: 0.65,
+      roughness: 0.3,
     });
 
-    // Pipe / Buchholz / PRV
     const pipeMaterial = new THREE.MeshStandardMaterial({
       color: 0x64748b,
       metalness: 0.7,
@@ -178,31 +265,44 @@ export default function TransformerAssembly3D({ onAssembledChange }) {
     });
 
     const buchholzMaterial = new THREE.MeshStandardMaterial({
-      color: 0x0284c7,
-      metalness: 0.5,
-      roughness: 0.3,
+      color: 0x0369a1,
+      metalness: 0.6,
+      roughness: 0.28,
     });
 
     const prvMaterial = new THREE.MeshStandardMaterial({
-      color: 0xdc2626, // Industrial safety red/orange
-      metalness: 0.5,
+      color: 0xdc2626,
+      metalness: 0.55,
       roughness: 0.3,
     });
 
     const cabinetMaterial = new THREE.MeshStandardMaterial({
       color: 0x0f172a,
-      metalness: 0.7,
+      metalness: 0.75,
       roughness: 0.25,
     });
 
+    themeElementsRef.current = {
+      gridHelper,
+      shadowPlane,
+      ambientLight,
+      keyLight,
+      fillLight,
+      rimLight,
+      materials: {
+        tank: tankMaterial,
+        tankCover: tankCoverMaterial,
+        radiator: radiatorMaterial
+      }
+    };
+
     // ==========================================
-    // 7. BUILD TRANSFORMER PROCEDURAL COMPONENTS
+    // 7. BUILD HIGH-PRECISION TRANSFORMER MODEL
     // ==========================================
     const components = {};
 
-    // --- Component A: Main Transformer Tank (Base, Skid Rails, Stiffeners) ---
+    // --- Component A: Main Transformer Tank & Skid ---
     const tankGroup = new THREE.Group();
-    // Tank body
     const tankBodyGeo = new THREE.BoxGeometry(4.2, 3.4, 2.6);
     const tankBody = new THREE.Mesh(tankBodyGeo, tankMaterial);
     tankBody.position.y = 0;
@@ -218,7 +318,7 @@ export default function TransformerAssembly3D({ onAssembledChange }) {
       tankGroup.add(rib);
     }
 
-    // Skid base rails with foundation rollers
+    // Skid base rails with rollers
     const skidGeo = new THREE.BoxGeometry(4.8, 0.25, 0.35);
     const skid1 = new THREE.Mesh(skidGeo, tankCoverMaterial);
     skid1.position.set(0, -1.85, 0.9);
@@ -228,7 +328,6 @@ export default function TransformerAssembly3D({ onAssembledChange }) {
     skid2.castShadow = true;
     tankGroup.add(skid1, skid2);
 
-    // Rollers under skids
     for (const z of [-0.9, 0.9]) {
       for (const x of [-1.8, 0, 1.8]) {
         const rollerGeo = new THREE.CylinderGeometry(0.18, 0.18, 0.4, 16);
@@ -239,13 +338,6 @@ export default function TransformerAssembly3D({ onAssembledChange }) {
         tankGroup.add(roller);
       }
     }
-
-    // Drain & sampling valves
-    const valveGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.4, 12);
-    const valve = new THREE.Mesh(valveGeo, brassMaterial);
-    valve.rotation.x = Math.PI / 2;
-    valve.position.set(1.6, -1.4, 1.35);
-    tankGroup.add(valve);
 
     // Lifting lugs on tank corners
     for (const [x, z] of [[-2.15, -1.35], [-2.15, 1.35], [2.15, -1.35], [2.15, 1.35]]) {
@@ -259,16 +351,14 @@ export default function TransformerAssembly3D({ onAssembledChange }) {
     components.tank = {
       group: tankGroup,
       origin: new THREE.Vector3(0, 0, 0),
-      exploded: new THREE.Vector3(0, -1.8, 0), // Moves downward when exploded
+      exploded: new THREE.Vector3(0, -2.2, 0)
     };
 
-    // --- Component B: Core & Coil Winding Assembly (Visible during explosion) ---
+    // --- Component B: Core & Coil Winding Assembly ---
     const coreGroup = new THREE.Group();
-    // 3 Limbs of laminated core
     const limbGeo = new THREE.CylinderGeometry(0.42, 0.42, 2.6, 24);
     const yokeGeo = new THREE.BoxGeometry(3.4, 0.35, 0.85);
 
-    // Top & bottom yokes
     const topYoke = new THREE.Mesh(yokeGeo, coreMaterial);
     topYoke.position.y = 1.15;
     topYoke.castShadow = true;
@@ -277,7 +367,6 @@ export default function TransformerAssembly3D({ onAssembledChange }) {
     bottomYoke.castShadow = true;
     coreGroup.add(topYoke, bottomYoke);
 
-    // 3 Phase Limbs & Copper Coils
     [-1.1, 0, 1.1].forEach((xPos) => {
       const limb = new THREE.Mesh(limbGeo, coreMaterial);
       limb.position.set(xPos, 0, 0);
@@ -304,10 +393,10 @@ export default function TransformerAssembly3D({ onAssembledChange }) {
     components.core = {
       group: coreGroup,
       origin: new THREE.Vector3(0, 0, 0),
-      exploded: new THREE.Vector3(0, 0.2, 0), // Revealed in center
+      exploded: new THREE.Vector3(0, 0.3, 0)
     };
 
-    // --- Component C: Tank Top Cover & Turrets ---
+    // --- Component C: Tank Top Cover & Flange ---
     const coverGroup = new THREE.Group();
     const coverPlateGeo = new THREE.BoxGeometry(4.4, 0.15, 2.8);
     const coverPlate = new THREE.Mesh(coverPlateGeo, tankCoverMaterial);
@@ -315,7 +404,6 @@ export default function TransformerAssembly3D({ onAssembledChange }) {
     coverPlate.castShadow = true;
     coverGroup.add(coverPlate);
 
-    // Bolted flange around cover
     const flangeBorderGeo = new THREE.BoxGeometry(4.5, 0.08, 2.9);
     const flangeBorder = new THREE.Mesh(flangeBorderGeo, tankMaterial);
     flangeBorder.position.y = 1.7;
@@ -325,27 +413,24 @@ export default function TransformerAssembly3D({ onAssembledChange }) {
     components.cover = {
       group: coverGroup,
       origin: new THREE.Vector3(0, 0, 0),
-      exploded: new THREE.Vector3(0, 2.2, 0), // Lifts up
+      exploded: new THREE.Vector3(0, 2.6, 0)
     };
 
-    // --- Component D: HV Bushings (High Voltage Porcelain Sheds - 3 Bushings) ---
+    // --- Component D: HV Bushings (High Voltage 132kV Porcelain Sheds) ---
     const hvBushingsGroup = new THREE.Group();
-    [-1.2, 0, 1.2].forEach((xPos, idx) => {
+    [-1.2, 0, 1.2].forEach((xPos) => {
       const bGroup = new THREE.Group();
-      // Mounting turret
       const turretGeo = new THREE.CylinderGeometry(0.24, 0.28, 0.35, 16);
       const turret = new THREE.Mesh(turretGeo, tankCoverMaterial);
       turret.position.y = 1.95;
       bGroup.add(turret);
 
-      // Porcelain stem
       const stemGeo = new THREE.CylinderGeometry(0.12, 0.16, 1.6, 16);
       const stem = new THREE.Mesh(stemGeo, hvPorcelainMaterial);
       stem.position.y = 2.8;
       stem.castShadow = true;
       bGroup.add(stem);
 
-      // 6 Glazed Porcelain sheds per bushing
       for (let s = 2.15; s <= 3.4; s += 0.22) {
         const shedGeo = new THREE.ConeGeometry(0.32, 0.12, 20);
         const shed = new THREE.Mesh(shedGeo, hvPorcelainMaterial);
@@ -354,7 +439,6 @@ export default function TransformerAssembly3D({ onAssembledChange }) {
         bGroup.add(shed);
       }
 
-      // Top brass terminal & corona ring
       const terminalGeo = new THREE.CylinderGeometry(0.06, 0.06, 0.3, 12);
       const terminal = new THREE.Mesh(terminalGeo, brassMaterial);
       terminal.position.y = 3.7;
@@ -366,7 +450,7 @@ export default function TransformerAssembly3D({ onAssembledChange }) {
       corona.position.y = 3.65;
       bGroup.add(corona);
 
-      bGroup.position.set(xPos, 0, 0.6); // Towards HV side
+      bGroup.position.set(xPos, 0, 0.6);
       hvBushingsGroup.add(bGroup);
     });
 
@@ -374,21 +458,19 @@ export default function TransformerAssembly3D({ onAssembledChange }) {
     components.hvBushings = {
       group: hvBushingsGroup,
       origin: new THREE.Vector3(0, 0, 0),
-      exploded: new THREE.Vector3(0, 4.2, 1.8), // Explodes high and forward
+      exploded: new THREE.Vector3(0, 4.6, 2.2)
     };
 
-    // --- Component E: LV Bushings (Low Voltage Cream Porcelain - 4 Bushings) ---
+    // --- Component E: LV Bushings (Low Voltage 33kV Porcelain Sheds) ---
     const lvBushingsGroup = new THREE.Group();
     [-1.2, -0.4, 0.4, 1.2].forEach((xPos) => {
       const bGroup = new THREE.Group();
-      // Stem
       const stemGeo = new THREE.CylinderGeometry(0.1, 0.14, 0.9, 16);
       const stem = new THREE.Mesh(stemGeo, lvPorcelainMaterial);
       stem.position.y = 2.3;
       stem.castShadow = true;
       bGroup.add(stem);
 
-      // 3 Porcelain sheds
       for (let s = 2.0; s <= 2.6; s += 0.22) {
         const shedGeo = new THREE.ConeGeometry(0.24, 0.1, 16);
         const shed = new THREE.Mesh(shedGeo, lvPorcelainMaterial);
@@ -396,13 +478,12 @@ export default function TransformerAssembly3D({ onAssembledChange }) {
         bGroup.add(shed);
       }
 
-      // Flat brass connector palm
       const palmGeo = new THREE.BoxGeometry(0.12, 0.25, 0.08);
       const palm = new THREE.Mesh(palmGeo, brassMaterial);
       palm.position.y = 2.85;
       bGroup.add(palm);
 
-      bGroup.position.set(xPos, 0, -0.6); // Towards LV side
+      bGroup.position.set(xPos, 0, -0.6);
       lvBushingsGroup.add(bGroup);
     });
 
@@ -410,12 +491,11 @@ export default function TransformerAssembly3D({ onAssembledChange }) {
     components.lvBushings = {
       group: lvBushingsGroup,
       origin: new THREE.Vector3(0, 0, 0),
-      exploded: new THREE.Vector3(0, 3.8, -1.8), // Explodes high and backwards
+      exploded: new THREE.Vector3(0, 4.2, -2.2)
     };
 
     // --- Component F: Left Radiator Cooling Bank ---
     const radLeftGroup = new THREE.Group();
-    // Header pipes top and bottom
     const headerGeo = new THREE.CylinderGeometry(0.14, 0.14, 2.2, 16);
     const topHeaderL = new THREE.Mesh(headerGeo, pipeMaterial);
     topHeaderL.rotation.x = Math.PI / 2;
@@ -425,7 +505,6 @@ export default function TransformerAssembly3D({ onAssembledChange }) {
     btmHeaderL.position.set(-2.8, -1.1, 0);
     radLeftGroup.add(topHeaderL, btmHeaderL);
 
-    // Connecting flanges to tank
     for (const y of [1.1, -1.1]) {
       const flangePipeGeo = new THREE.CylinderGeometry(0.1, 0.1, 0.8, 16);
       const fPipe = new THREE.Mesh(flangePipeGeo, pipeMaterial);
@@ -434,7 +513,6 @@ export default function TransformerAssembly3D({ onAssembledChange }) {
       radLeftGroup.add(fPipe);
     }
 
-    // Cooling Fin Plates (12 fins)
     for (let z = -0.9; z <= 0.9; z += 0.16) {
       const finGeo = new THREE.BoxGeometry(0.75, 2.2, 0.02);
       const fin = new THREE.Mesh(finGeo, radiatorMaterial);
@@ -443,7 +521,6 @@ export default function TransformerAssembly3D({ onAssembledChange }) {
       radLeftGroup.add(fin);
     }
 
-    // Cooling fan assembly under radiator
     const fanCowlGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.15, 20);
     const fanCowl = new THREE.Mesh(fanCowlGeo, tankCoverMaterial);
     fanCowl.position.set(-2.8, -1.4, 0);
@@ -453,7 +530,7 @@ export default function TransformerAssembly3D({ onAssembledChange }) {
     components.radiatorLeft = {
       group: radLeftGroup,
       origin: new THREE.Vector3(0, 0, 0),
-      exploded: new THREE.Vector3(-3.2, 0, 0), // Slides far to the left
+      exploded: new THREE.Vector3(-3.8, 0, 0)
     };
 
     // --- Component G: Right Radiator Cooling Bank ---
@@ -490,12 +567,11 @@ export default function TransformerAssembly3D({ onAssembledChange }) {
     components.radiatorRight = {
       group: radRightGroup,
       origin: new THREE.Vector3(0, 0, 0),
-      exploded: new THREE.Vector3(3.2, 0, 0), // Slides far to the right
+      exploded: new THREE.Vector3(3.8, 0, 0)
     };
 
-    // --- Component H: Conservator Tank, Brackets & MOG ---
+    // --- Component H: Conservator Tank & MOG ---
     const conservatorGroup = new THREE.Group();
-    // Cylindrical expansion tank
     const consTankGeo = new THREE.CylinderGeometry(0.55, 0.55, 3.2, 24);
     const consTank = new THREE.Mesh(consTankGeo, conservatorMaterial);
     consTank.rotation.z = Math.PI / 2;
@@ -503,7 +579,6 @@ export default function TransformerAssembly3D({ onAssembledChange }) {
     consTank.castShadow = true;
     conservatorGroup.add(consTank);
 
-    // Domed end caps
     const capGeo = new THREE.SphereGeometry(0.55, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2);
     const cap1 = new THREE.Mesh(capGeo, conservatorMaterial);
     cap1.rotation.z = -Math.PI / 2;
@@ -513,7 +588,6 @@ export default function TransformerAssembly3D({ onAssembledChange }) {
     cap2.position.set(-1.6, 3.45, -0.95);
     conservatorGroup.add(cap1, cap2);
 
-    // Support legs from tank cover
     for (const x of [-1.1, 1.1]) {
       const legGeo = new THREE.BoxGeometry(0.12, 1.6, 0.12);
       const leg = new THREE.Mesh(legGeo, tankCoverMaterial);
@@ -522,19 +596,17 @@ export default function TransformerAssembly3D({ onAssembledChange }) {
       conservatorGroup.add(leg);
     }
 
-    // Magnetic Oil Gauge (MOG) dial on the end cap
     const mogGeo = new THREE.CylinderGeometry(0.2, 0.2, 0.08, 20);
     const mog = new THREE.Mesh(mogGeo, lvPorcelainMaterial);
     mog.rotation.z = Math.PI / 2;
     mog.position.set(1.72, 3.45, -0.95);
     conservatorGroup.add(mog);
 
-    // Silica gel breather pipe and jar
     const breatherPipeGeo = new THREE.CylinderGeometry(0.04, 0.04, 1.8, 12);
     const breatherPipe = new THREE.Mesh(breatherPipeGeo, pipeMaterial);
     breatherPipe.position.set(1.5, 2.3, -1.05);
     const silicaJarGeo = new THREE.CylinderGeometry(0.14, 0.14, 0.45, 16);
-    const silicaJar = new THREE.Mesh(silicaJarGeo, buchholzMaterial); // Blue silica crystals
+    const silicaJar = new THREE.Mesh(silicaJarGeo, buchholzMaterial);
     silicaJar.position.set(1.5, 1.25, -1.05);
     conservatorGroup.add(breatherPipe, silicaJar);
 
@@ -542,12 +614,11 @@ export default function TransformerAssembly3D({ onAssembledChange }) {
     components.conservator = {
       group: conservatorGroup,
       origin: new THREE.Vector3(0, 0, 0),
-      exploded: new THREE.Vector3(0, 2.5, -2.5), // Explodes high and backwards
+      exploded: new THREE.Vector3(0, 3.0, -3.0)
     };
 
     // --- Component I: Buchholz Relay and Main Oil Pipe ---
     const buchholzGroup = new THREE.Group();
-    // Inclined connecting pipe from top cover to conservator
     const pipePoints = [
       new THREE.Vector3(0.5, 1.8, -0.2),
       new THREE.Vector3(0.5, 2.4, -0.6),
@@ -558,29 +629,20 @@ export default function TransformerAssembly3D({ onAssembledChange }) {
     const mainOilPipe = new THREE.Mesh(pipeGeometry, pipeMaterial);
     buchholzGroup.add(mainOilPipe);
 
-    // Buchholz relay housing in the middle of pipe
     const bRelayGeo = new THREE.BoxGeometry(0.3, 0.26, 0.42);
     const bRelay = new THREE.Mesh(bRelayGeo, buchholzMaterial);
     bRelay.position.set(0.5, 2.4, -0.6);
     bRelay.rotation.x = 0.35;
     buchholzGroup.add(bRelay);
 
-    // Inspection glass on Buchholz relay
-    const glassGeo = new THREE.BoxGeometry(0.32, 0.12, 0.18);
-    const glassMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.1, transparent: true, opacity: 0.8 });
-    const glass = new THREE.Mesh(glassGeo, glassMat);
-    glass.position.set(0.5, 2.4, -0.6);
-    glass.rotation.x = 0.35;
-    buchholzGroup.add(glass);
-
     scene.add(buchholzGroup);
     components.buchholz = {
       group: buchholzGroup,
       origin: new THREE.Vector3(0, 0, 0),
-      exploded: new THREE.Vector3(0, 3.2, -1.0),
+      exploded: new THREE.Vector3(0, 3.6, -1.2)
     };
 
-    // --- Component J: Pressure Relief Valve (PRV) with Deflector ---
+    // --- Component J: Pressure Relief Valve (PRV) ---
     const prvGroup = new THREE.Group();
     const prvBaseGeo = new THREE.CylinderGeometry(0.25, 0.28, 0.2, 16);
     const prvBase = new THREE.Mesh(prvBaseGeo, tankCoverMaterial);
@@ -598,36 +660,25 @@ export default function TransformerAssembly3D({ onAssembledChange }) {
     components.prv = {
       group: prvGroup,
       origin: new THREE.Vector3(0, 0, 0),
-      exploded: new THREE.Vector3(-1.0, 3.6, 0.5),
+      exploded: new THREE.Vector3(-1.2, 4.0, 0.6)
     };
 
-    // --- Component K: Marshalling Box / Telemetry Control Cabinet ---
+    // --- Component K: Marshalling Cabinet ---
     const cabinetGroup = new THREE.Group();
     const cabBodyGeo = new THREE.BoxGeometry(1.1, 1.5, 0.5);
     const cabBody = new THREE.Mesh(cabBodyGeo, cabinetMaterial);
     cabBody.position.set(0, -0.2, 1.55);
     cabBody.castShadow = true;
-    // Glass window / status screen on cabinet
-    const cabScreenGeo = new THREE.PlaneGeometry(0.6, 0.4);
-    const cabScreenMat = new THREE.MeshBasicMaterial({ color: 0x0284c7 });
-    const cabScreen = new THREE.Mesh(cabScreenGeo, cabScreenMat);
-    cabScreen.position.set(0, 0.1, 1.81);
-    cabinetGroup.add(cabBody, cabScreen);
-
-    // Conduits from cabinet to tank
-    const conduitGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.6, 8);
-    const conduit = new THREE.Mesh(conduitGeo, pipeMaterial);
-    conduit.position.set(0, 0.7, 1.55);
-    cabinetGroup.add(conduit);
+    cabinetGroup.add(cabBody);
 
     scene.add(cabinetGroup);
     components.cabinet = {
       group: cabinetGroup,
       origin: new THREE.Vector3(0, 0, 0),
-      exploded: new THREE.Vector3(0, -0.2, 2.8), // Slides forward
+      exploded: new THREE.Vector3(0, -0.2, 3.2)
     };
 
-    // --- Component L: On-Load Tap Changer (OLTC) Compartment ---
+    // --- Component L: On-Load Tap Changer (OLTC) ---
     const oltcGroup = new THREE.Group();
     const oltcBodyGeo = new THREE.BoxGeometry(0.8, 2.2, 0.9);
     const oltcBody = new THREE.Mesh(oltcBodyGeo, tankCoverMaterial);
@@ -635,7 +686,6 @@ export default function TransformerAssembly3D({ onAssembledChange }) {
     oltcBody.castShadow = true;
     oltcGroup.add(oltcBody);
 
-    // Motor drive shaft
     const shaftGeo = new THREE.CylinderGeometry(0.05, 0.05, 1.4, 8);
     const shaft = new THREE.Mesh(shaftGeo, brassMaterial);
     shaft.position.set(1.9, -0.7, 1.45);
@@ -645,30 +695,26 @@ export default function TransformerAssembly3D({ onAssembledChange }) {
     components.oltc = {
       group: oltcGroup,
       origin: new THREE.Vector3(0, 0, 0),
-      exploded: new THREE.Vector3(2.5, 0.3, 2.2),
+      exploded: new THREE.Vector3(2.8, 0.3, 2.5)
     };
 
     componentsRef.current = components;
 
     // ==========================================
-    // 8. INTERACTIVE MOUSE / TOUCH ORBIT CONTROLS
+    // 8. INTERACTIVE ORBIT (Mouse/Touch supported, idle auto-orbit)
     // ==========================================
-    let isUserInteracting = false;
-    let cameraDistance = 14;
-    let cameraPhi = 0.55; // vertical angle
-    let cameraTheta = 0.7; // horizontal angle
-
-    const updateCameraPosition = () => {
-      const x = cameraDistance * Math.cos(cameraPhi) * Math.sin(cameraTheta);
-      const y = cameraDistance * Math.sin(cameraPhi);
-      const z = cameraDistance * Math.cos(cameraPhi) * Math.cos(cameraTheta);
-      camera.position.set(x, Math.max(y, 1.0), z);
-      camera.lookAt(0, 0.6, 0);
+    const updateCamPos = () => {
+      const { cameraDist, cameraPhi, cameraTheta } = animTimeline.current;
+      const x = cameraDist * Math.cos(cameraPhi) * Math.sin(cameraTheta);
+      const y = cameraDist * Math.sin(cameraPhi);
+      const z = cameraDist * Math.cos(cameraPhi) * Math.cos(cameraTheta);
+      camera.position.set(x, Math.max(y, 1.2), z);
+      camera.lookAt(0, 0.8, 0);
     };
 
     const handleMouseDown = (e) => {
       isDraggingRef.current = true;
-      isUserInteracting = true;
+      animTimeline.current.isUserInteracting = true;
       previousMousePosition.current = { x: e.clientX, y: e.clientY };
     };
 
@@ -677,49 +723,55 @@ export default function TransformerAssembly3D({ onAssembledChange }) {
       const deltaX = e.clientX - previousMousePosition.current.x;
       const deltaY = e.clientY - previousMousePosition.current.y;
 
-      cameraTheta -= deltaX * 0.007;
-      cameraPhi = Math.max(0.1, Math.min(Math.PI / 2.2, cameraPhi + deltaY * 0.007));
+      animTimeline.current.cameraTheta -= deltaX * 0.007;
+      animTimeline.current.cameraPhi = Math.max(0.12, Math.min(Math.PI / 2.3, animTimeline.current.cameraPhi + deltaY * 0.007));
 
       previousMousePosition.current = { x: e.clientX, y: e.clientY };
-      updateCameraPosition();
+      updateCamPos();
     };
 
     const handleMouseUp = () => {
       isDraggingRef.current = false;
-      setTimeout(() => { isUserInteracting = false; }, 4000);
+      clearTimeout(animTimeline.current.userInteractTimeout);
+      animTimeline.current.userInteractTimeout = setTimeout(() => {
+        animTimeline.current.isUserInteracting = false;
+      }, 3500);
     };
 
     const handleWheel = (e) => {
       e.preventDefault();
-      cameraDistance = Math.max(7, Math.min(22, cameraDistance + e.deltaY * 0.01));
-      updateCameraPosition();
+      animTimeline.current.cameraDist = Math.max(8, Math.min(22, animTimeline.current.cameraDist + e.deltaY * 0.01));
+      updateCamPos();
     };
 
     // Touch support for mobile devices
-    let touchStartX = 0;
-    let touchStartY = 0;
+    let touchX = 0;
+    let touchY = 0;
     const handleTouchStart = (e) => {
       if (e.touches.length === 1) {
-        touchStartX = e.touches[0].clientX;
-        touchStartY = e.touches[0].clientY;
-        isUserInteracting = true;
+        touchX = e.touches[0].clientX;
+        touchY = e.touches[0].clientY;
+        animTimeline.current.isUserInteracting = true;
       }
     };
 
     const handleTouchMove = (e) => {
       if (e.touches.length === 1) {
-        const deltaX = e.touches[0].clientX - touchStartX;
-        const deltaY = e.touches[0].clientY - touchStartY;
-        cameraTheta -= deltaX * 0.008;
-        cameraPhi = Math.max(0.1, Math.min(Math.PI / 2.2, cameraPhi + deltaY * 0.008));
-        touchStartX = e.touches[0].clientX;
-        touchStartY = e.touches[0].clientY;
-        updateCameraPosition();
+        const dx = e.touches[0].clientX - touchX;
+        const dy = e.touches[0].clientY - touchY;
+        animTimeline.current.cameraTheta -= dx * 0.008;
+        animTimeline.current.cameraPhi = Math.max(0.12, Math.min(Math.PI / 2.3, animTimeline.current.cameraPhi + dy * 0.008));
+        touchX = e.touches[0].clientX;
+        touchY = e.touches[0].clientY;
+        updateCamPos();
       }
     };
 
     const handleTouchEnd = () => {
-      setTimeout(() => { isUserInteracting = false; }, 3000);
+      clearTimeout(animTimeline.current.userInteractTimeout);
+      animTimeline.current.userInteractTimeout = setTimeout(() => {
+        animTimeline.current.isUserInteracting = false;
+      }, 3000);
     };
 
     const domEl = renderer.domElement;
@@ -732,60 +784,82 @@ export default function TransformerAssembly3D({ onAssembledChange }) {
     domEl.addEventListener('touchend', handleTouchEnd);
 
     // ==========================================
-    // 9. ANIMATION LOOP
+    // 9. AUTOMATIC CONTINUOUS ASSEMBLY/DISASSEMBLY LOOP
     // ==========================================
+    // Timeline parameters (in seconds):
+    const ASSEMBLED_PAUSE = 2.4;  // Hold complete assembly
+    const DISASSEMBLE_DUR = 3.2;  // Disassemble outwards
+    const EXPLODED_PAUSE = 1.8;   // Hold exploded components in 3D
+    const ASSEMBLE_DUR = 3.2;     // Assemble smoothly back
+
+    // Smooth sinusoidal easeInOut function
+    const easeInOut = (t) => 0.5 * (1 - Math.cos(Math.PI * t));
+
     let lastTime = performance.now();
 
-    const animate = (time) => {
-      const delta = Math.min((time - lastTime) / 1000, 0.1);
-      lastTime = time;
+    const animateLoop = (now) => {
+      const delta = Math.min((now - lastTime) / 1000, 0.1);
+      lastTime = now;
 
-      // Update assembly progress
-      if (animState.current.direction !== 0) {
-        animState.current.progress += delta * animState.current.speed * animState.current.direction;
-        if (animState.current.progress >= 1.0) {
-          animState.current.progress = 1.0;
-          animState.current.direction = 0; // stop assembling, now complete!
-          setIsPlaying(false);
-          setAssemblyProgress(100);
-          if (onAssembledChange && !animState.current.assembledNotified) {
-            onAssembledChange(true);
-            animState.current.assembledNotified = true;
-          }
-        } else if (animState.current.progress <= 0) {
-          animState.current.progress = 0;
-          animState.current.direction = 0;
-          setIsPlaying(false);
-          setAssemblyProgress(0);
-        } else {
-          setAssemblyProgress(Math.round(animState.current.progress * 100));
+      const tLine = animTimeline.current;
+      tLine.stateTimer += delta;
+
+      if (tLine.state === 0) {
+        // STATE 0: ASSEMBLED PAUSE
+        tLine.progress = 1.0;
+        if (tLine.stateTimer >= ASSEMBLED_PAUSE) {
+          tLine.state = 1; // transition to disassembling
+          tLine.stateTimer = 0;
+        }
+      } else if (tLine.state === 1) {
+        // STATE 1: DISASSEMBLING (1.0 -> 0.0)
+        const t = Math.min(1.0, tLine.stateTimer / DISASSEMBLE_DUR);
+        tLine.progress = 1.0 - easeInOut(t);
+        if (t >= 1.0) {
+          tLine.state = 2; // transition to exploded pause
+          tLine.stateTimer = 0;
+          tLine.progress = 0.0;
+        }
+      } else if (tLine.state === 2) {
+        // STATE 2: EXPLODED PAUSE
+        tLine.progress = 0.0;
+        if (tLine.stateTimer >= EXPLODED_PAUSE) {
+          tLine.state = 3; // transition to assembling
+          tLine.stateTimer = 0;
+        }
+      } else if (tLine.state === 3) {
+        // STATE 3: ASSEMBLING (0.0 -> 1.0)
+        const t = Math.min(1.0, tLine.stateTimer / ASSEMBLE_DUR);
+        tLine.progress = easeInOut(t);
+        if (t >= 1.0) {
+          tLine.state = 0; // back to assembled pause
+          tLine.stateTimer = 0;
+          tLine.progress = 1.0;
         }
       }
 
-      // Smooth cubic easing for assembly: easeOutCubic
-      const p = animState.current.progress;
-      const ease = 1 - Math.pow(1 - p, 3);
-      const explodeFactor = 1 - ease; // 1 = fully exploded, 0 = fully assembled
+      // Explode factor: 0 = fully assembled, 1 = fully exploded
+      const explodeFactor = 1.0 - tLine.progress;
 
-      // Interpolate each component position
+      // Update positions of all 3D transformer subsystems
       Object.keys(componentsRef.current).forEach((key) => {
         const item = componentsRef.current[key];
         item.group.position.lerpVectors(item.origin, item.exploded, explodeFactor);
       });
 
-      // Cinematic camera movement when assembled or during assembly
-      if (!isUserInteracting && cinematicMode) {
-        cameraTheta += delta * 0.18; // Slow majestic rotation
-        updateCameraPosition();
+      // Automatic smooth camera rotation (if user is not actively dragging)
+      if (!tLine.isUserInteracting) {
+        tLine.cameraTheta += delta * 0.14;
+        updateCamPos();
       }
 
       renderer.render(scene, camera);
-      animationFrameRef.current = requestAnimationFrame(animate);
+      animationFrameRef.current = requestAnimationFrame(animateLoop);
     };
 
-    animationFrameRef.current = requestAnimationFrame(animate);
+    animationFrameRef.current = requestAnimationFrame(animateLoop);
 
-    // Resize listener
+    // Responsive window resize
     const handleResize = () => {
       if (!container) return;
       const newW = container.clientWidth;
@@ -812,150 +886,12 @@ export default function TransformerAssembly3D({ onAssembledChange }) {
         rendererRef.current.dispose();
       }
     };
-  }, [cinematicMode]);
-
-  // Replay animation handler
-  const handleReplay = () => {
-    animState.current.progress = 0;
-    animState.current.direction = 1;
-    animState.current.assembledNotified = false;
-    setIsPlaying(true);
-    setAssemblyProgress(0);
-  };
-
-  const handleTogglePlay = () => {
-    if (isPlaying) {
-      animState.current.direction = 0;
-      setIsPlaying(false);
-    } else {
-      if (animState.current.progress >= 1.0) {
-        animState.current.progress = 0;
-      }
-      animState.current.direction = 1;
-      setIsPlaying(true);
-    }
-  };
-
-  const handleSliderChange = (e) => {
-    const val = parseFloat(e.target.value) / 100;
-    animState.current.progress = val;
-    animState.current.direction = 0;
-    setIsPlaying(false);
-    setAssemblyProgress(Math.round(val * 100));
-  };
+  }, []);
 
   return (
-    <div className="relative w-full h-full min-h-[440px] flex flex-col justify-end overflow-hidden select-none bg-slate-950">
-      {/* Three.js Canvas Container */}
+    <div className="relative w-full h-full min-h-[460px] sm:min-h-[520px] overflow-hidden select-none">
+      {/* 3D Canvas element - zero clutter, no buttons */}
       <div ref={mountRef} className="absolute inset-0 cursor-grab active:cursor-grabbing" />
-
-      {/* Floating Industrial Watermark / Technical Badge */}
-      <div className="absolute top-4 left-4 z-10 pointer-events-none flex flex-col gap-1">
-        <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping" />
-          <span className="text-[11px] font-mono uppercase tracking-wider font-semibold text-cyan-400 bg-cyan-950/70 border border-cyan-800/60 px-2 py-0.5 rounded">
-            Interactive 3D Assembly Simulator
-          </span>
-        </div>
-        <p className="text-xs text-slate-300 font-mono mt-0.5">
-          50 MVA 132/33kV Power Transformer • CAD Assembly
-        </p>
-      </div>
-
-      {/* 3D Component Labels Overlay */}
-      <div className="absolute top-4 right-4 z-10 pointer-events-none hidden md:flex flex-col gap-1.5 text-right font-mono text-[11px] text-slate-400 bg-slate-900/60 p-2.5 rounded-lg border border-slate-800 backdrop-blur-sm">
-        <div className="flex items-center justify-end gap-2 text-cyan-400 font-semibold border-b border-slate-800 pb-1">
-          <Layers className="w-3.5 h-3.5" />
-          <span>Subsystems ({assemblyProgress}%)</span>
-        </div>
-        <div className="flex items-center justify-end gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-          <span>HV Porcelain Bushings (132kV)</span>
-        </div>
-        <div className="flex items-center justify-end gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-slate-300"></span>
-          <span>LV Porcelain Bushings (33kV)</span>
-        </div>
-        <div className="flex items-center justify-end gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-          <span>Conservator Tank & MOG Gauge</span>
-        </div>
-        <div className="flex items-center justify-end gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-sky-400"></span>
-          <span>Buchholz Gas Relay & Oil Pipe</span>
-        </div>
-        <div className="flex items-center justify-end gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-red-500"></span>
-          <span>Spring-Loaded PRV Valve</span>
-        </div>
-        <div className="flex items-center justify-end gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-slate-500"></span>
-          <span>Radiator Cooling Banks (12-Fin)</span>
-        </div>
-        <div className="flex items-center justify-end gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-yellow-600"></span>
-          <span>Magnetic Core & Copper Coils</span>
-        </div>
-      </div>
-
-      {/* Bottom Floating Controls Bar */}
-      <div className="relative z-10 mx-3 mb-3 p-3 bg-slate-900/85 backdrop-blur-md rounded-xl border border-slate-800/80 shadow-2xl flex flex-wrap items-center justify-between gap-3 text-xs">
-        {/* Play / Pause & Replay */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleTogglePlay}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-medium transition active:scale-95 shadow-sm"
-            title={isPlaying ? "Pause Animation" : "Play Assembly"}
-          >
-            {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-            <span>{isPlaying ? "Pause" : "Play"}</span>
-          </button>
-
-          <button
-            onClick={handleReplay}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition active:scale-95"
-            title="Replay Assembly Animation"
-          >
-            <RotateCcw className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="hidden sm:inline">Replay</span>
-          </button>
-
-          <button
-            onClick={() => setCinematicMode(prev => !prev)}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border transition ${
-              cinematicMode
-                ? 'bg-blue-950/70 border-cyan-500/50 text-cyan-300'
-                : 'bg-slate-800/70 border-slate-700 text-slate-400'
-            }`}
-            title="Toggle Cinematic Camera Orbit"
-          >
-            <Compass className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Orbit: {cinematicMode ? 'ON' : 'OFF'}</span>
-          </button>
-        </div>
-
-        {/* Assembly Exploded Range Slider */}
-        <div className="flex items-center gap-2.5 flex-1 min-w-[160px] max-w-xs">
-          <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">Exploded</span>
-          <input
-            type="range"
-            min="0"
-            max="100"
-            value={assemblyProgress}
-            onChange={handleSliderChange}
-            className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400"
-          />
-          <span className="text-[10px] font-mono text-cyan-400 font-bold min-w-[32px] text-right">
-            {assemblyProgress}%
-          </span>
-        </div>
-
-        {/* Interaction Hint */}
-        <div className="hidden lg:flex items-center gap-1 text-[11px] text-slate-400">
-          <Eye className="w-3.5 h-3.5 text-cyan-400" />
-          <span>Click & drag to rotate • Scroll to zoom</span>
-        </div>
-      </div>
     </div>
   );
 }
